@@ -1,0 +1,12 @@
+# Ignorar arquivos do professor e documentos
+*.pdf
+*.docx
+*.pptx
+
+# Ignorar pastas temporárias do Python
+__pycache__/
+*.py[cod]
+
+# Ignorar arquivos de sistema
+.DS_Store
+Thumbs.db
