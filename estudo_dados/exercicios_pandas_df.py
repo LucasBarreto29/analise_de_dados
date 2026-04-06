@@ -33,8 +33,21 @@ dados_vendas = {
 # c) Mostre o formato (linhas, colunas)
 # d) Mostre os tipos de dados das colunas
 
+
+
 # RESOLUCAO: complete aqui
 
+# A)
+df_vendas = pd.DataFrame(dados_vendas)
+
+# B)
+print(df_vendas.head())
+
+# C)
+df_vendas.shape
+
+# D)
+df_vendas.dtypes
 
 # -------------------------------------------------
 # BLOCO 2: selecionar colunas e linhas
@@ -46,7 +59,14 @@ dados_vendas = {
 # c) Mostre as linhas de indice 2 ate 4
 
 # RESOLUCAO: complete aqui
+# A)
+print(df_vendas[["mes", "vendas"]])
 
+# B)
+print(df_vendas.iloc[0])
+
+# C)
+print(df_vendas.iloc[2:5])
 
 # -------------------------------------------------
 # BLOCO 3: filtros com condicoes de negocio
@@ -59,6 +79,17 @@ dados_vendas = {
 
 # RESOLUCAO: complete aqui
 
+# A)
+df_filtro = df_vendas[df_vendas["vendas"] > 12000]
+print(df_filtro)
+
+# B) 
+df_filtro_filial = df_vendas[df_vendas["filial"] == "Centro"]
+print(df_filtro_filial)
+
+# C)
+df_filtro_filial_vendas = df_vendas[df_vendas["vendas"] > 11000] & df_vendas[df_vendas["filial"] == "Norte"]
+
 
 # -------------------------------------------------
 # BLOCO 4: novas colunas e metricas
@@ -70,7 +101,16 @@ dados_vendas = {
 # c) Mostre apenas "filial", "mes", "ticket_medio", "meta_batida"
 
 # RESOLUCAO: complete aqui
+# A)
+df_vendas["ticket_medio"] = df_vendas["vendas"]/df_vendas["clientes"]
+print(df_vendas)
 
+# B)
+df_vendas["meta_batida"] = df_vendas["vendas"] >= 130000
+print(df_vendas)
+
+# C)
+print(df_vendas[["filial", "mes", "ticket_medio", "meta_batida"]])
 
 # -------------------------------------------------
 # BLOCO 5: agregacao com groupby
@@ -78,11 +118,21 @@ dados_vendas = {
 
 # Exercicio 5:
 # a) Calcule total de vendas por filial
+
 # b) Calcule media de clientes por mes
+
 # c) Descubra a filial com maior total de vendas
 
 # RESOLUCAO: complete aqui
 
+total_vendas = df_vendas.groupby("filial")["vendas"].sum()
+print(total_vendas)
+
+media_clientes = df_vendas.groupby("mes")["clientes"].mean()
+print(media_clientes)
+
+mais_vendas = total_vendas.idxmax()
+print(mais_vendas)
 
 # -------------------------------------------------
 # BLOCO 6: ordenacao e ranking
@@ -94,7 +144,14 @@ dados_vendas = {
 # c) Mostre um ranking com "filial", "mes", "vendas"
 
 # RESOLUCAO: complete aqui
+df_vendas_ordenado = df_vendas.sort_values(by="vendas", ascending = False)
+print(df_vendas_ordenado)
 
+print(df_vendas_ordenado.head(3))
+
+df_rank = df_vendas_ordenado[["filial", "mes", "vendas"]].copy()
+df_rank["ranking"] = df_rank["vendas"].rank(ascending=False, method="min").astype(int)
+print(df_rank)
 
 # -------------------------------------------------
 # BLOCO 7: desafio final de analise
