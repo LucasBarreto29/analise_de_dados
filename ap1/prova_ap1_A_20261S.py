@@ -170,3 +170,10 @@ print(f"Retorno total da VALE3 em 2025: {retorno:.4f} ou {retorno*100:.2f}%")
 
 
 # (1,5) 12 - Quantos setores ("setor") tem essa carteira formada por 10 ações?
+# Exemplo de como a carteira deve estar (ajuste conforme seu código da Q11)
+#carteira_magic = sua_carteira_da_questao_11   # ← substitua pelo nome da variável que você usou na Q11
+
+# Contar quantos setores únicos existem na carteira
+#quantidade_setores = carteira_magic['setor'].nunique()
+
+#print(f"A carteira da Magic Formula tem {quantidade_setores} setores diferentes.")
