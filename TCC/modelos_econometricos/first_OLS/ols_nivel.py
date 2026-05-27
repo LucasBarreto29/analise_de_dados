@@ -1,5 +1,5 @@
 """
-FIRST OLS (Modelo em Nível) - Diagnóstico Teórico e Testes Rigorosos
+FIRST OLS (Modelo em Nível) - Diagnóstico Teórico e Testes
 ----------------------------------------------------------------------
 Este script executa o modelo OLS inicial e o submete a uma bateria completa
 de testes econométricos para demonstrar falhas de estacionariedade,
