@@ -7,11 +7,10 @@ from statsmodels.stats.outliers_influence import variance_inflation_factor
 from patsy import dmatrices
 
 warnings.filterwarnings('ignore')
-# Ajuste do BASE_DIR para resolver a raiz da pasta TCC
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 
 # 1. PREPARAÇÃO DOS DADOS
-df = pd.read_csv(os.path.join(BASE_DIR, "dados", "painel_mestre.csv"))
+df = pd.read_csv('/Users/lucas/Desktop/analise_dados/analise_de_dados/TCC/dados/painel_mestre.csv')
 df = df[df['Setor'] != 'Comércio']
 
 df['ln_Invest_Tech'] = np.log(df['Investimento_Tech_USD'])
