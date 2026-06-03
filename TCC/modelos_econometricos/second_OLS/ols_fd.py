@@ -28,10 +28,11 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__fil
 df = pd.read_csv(os.path.join(BASE_DIR, "dados", "painel_mestre.csv"))
 df['ln_Invest_Tech'] = np.log(df['Investimento_Tech_USD'])
 df['ln_Produtividade'] = np.log(df['Produtividade_Hora_Habitual'])
+df['ln_VAB_Industria'] = np.log(df['VAB_Industria_Volume'])
 df.sort_values(by=['Setor', 'Trimestre'], inplace=True)
 df['d_ln_Produtividade'] = df.groupby('Setor')['ln_Produtividade'].diff()
 df['d_ln_Invest_Tech'] = df.groupby('Setor')['ln_Invest_Tech'].diff()
-df['d_VAB_Indice'] = df.groupby('Setor')['VAB_Indice_Volume'].diff()
+df['d_ln_VAB_Industria'] = df.groupby('Setor')['ln_VAB_Industria'].diff()
 df_diff = df.dropna().copy()
 
 print("="*70)
@@ -55,7 +56,7 @@ print("="*70)
 # Regressão sem dummies de tempo para evitar multicolinearidade com a variável nacional de tech.
 # Erros clusterizados por setor lidam com heterocedasticidade/autocorrelação restante
 modelo_diff = smf.ols(
-    formula='d_ln_Produtividade ~ d_ln_Invest_Tech + d_VAB_Indice',
+    formula='d_ln_Produtividade ~ d_ln_Invest_Tech + d_ln_VAB_Industria',
     data=df_diff
 ).fit(cov_type='cluster', cov_kwds={'groups': df_diff['Setor']})
 print(modelo_diff.summary().tables[0])
@@ -70,7 +71,7 @@ print("A intuição econômica sugere que a tecnologia leva tempo para ser assim
 print("="*70)
 print(" 3. DIAGNÓSTICO DOS RESÍDUOS (TESTES PÓS-ESTIMAÇÃO) ")
 print("="*70)
-modelo_unclustered = smf.ols('d_ln_Produtividade ~ d_ln_Invest_Tech + d_VAB_Indice', data=df_diff).fit()
+modelo_unclustered = smf.ols('d_ln_Produtividade ~ d_ln_Invest_Tech + d_ln_VAB_Industria', data=df_diff).fit()
 
 # A. Normalidade: Jarque-Bera
 jb_stat, jb_pval, skew, kurtosis = sms.jarque_bera(modelo_unclustered.resid)
@@ -98,7 +99,7 @@ if bg_test[1] > 0.05:
     print("   -> Não rejeitamos H0: Não há autocorrelação grave (Modelo bem especificado!).")
 
 # D. Multicolinearidade Perfeita
-y, X = dmatrices('d_ln_Produtividade ~ d_ln_Invest_Tech + d_VAB_Indice', data=df_diff, return_type='dataframe')
+y, X = dmatrices('d_ln_Produtividade ~ d_ln_Invest_Tech + d_ln_VAB_Industria', data=df_diff, return_type='dataframe')
 vif_data = pd.DataFrame()
 vif_data["feature"] = X.columns
 vif_data["VIF"] = [variance_inflation_factor(X.values, i) for i in range(len(X.columns))]

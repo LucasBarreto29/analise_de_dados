@@ -28,6 +28,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__fil
 df = pd.read_csv(os.path.join(BASE_DIR, "dados", "painel_mestre.csv"))
 df['ln_Invest_Tech'] = np.log(df['Investimento_Tech_USD'])
 df['ln_Produtividade'] = np.log(df['Produtividade_Hora_Habitual'])
+df['ln_VAB_Industria'] = np.log(df['VAB_Industria_Volume'])
 df.dropna(inplace=True)
 
 print("="*70)
@@ -56,7 +57,7 @@ print("As séries são Não-Estacionárias (Possuem Raiz Unitária).\n")
 print("="*70)
 print(" 2. RESULTADOS DO MODELO (OLS EM NÍVEL) ")
 print("="*70)
-formula = 'ln_Produtividade ~ ln_Invest_Tech + VAB_Indice_Volume + C(Setor) + C(Trimestre)'
+formula = 'ln_Produtividade ~ ln_Invest_Tech + ln_VAB_Industria + C(Setor) + C(Trimestre)'
 modelo = smf.ols(formula=formula, data=df).fit()
 print(modelo.summary().tables[0]) # Mostrando apenas a primeira tabela para não poluir
 print(modelo.summary().tables[1])
@@ -101,7 +102,7 @@ if bg_test[1] < 0.05: print("   -> Rejeitamos H0: Forte autocorrelação confirm
 print("D) Multicolinearidade (VIF - Variance Inflation Factor)")
 print("   Calculando VIF para as variáveis numéricas para provar a multicolinearidade de ln_Invest_Tech...")
 # Construindo matriz de design apenas para variáveis numéricas (sem dummies) para evitar erro singular do VIF
-y, X = dmatrices('ln_Produtividade ~ ln_Invest_Tech + VAB_Indice_Volume', data=df, return_type='dataframe')
+y, X = dmatrices('ln_Produtividade ~ ln_Invest_Tech + ln_VAB_Industria', data=df, return_type='dataframe')
 vif_data = pd.DataFrame()
 vif_data["feature"] = X.columns
 vif_data["VIF"] = [variance_inflation_factor(X.values, i) for i in range(len(X.columns))]
