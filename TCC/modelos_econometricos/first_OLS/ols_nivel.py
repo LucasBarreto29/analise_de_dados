@@ -1,113 +1,116 @@
 """
-FIRST OLS (Modelo em Nível) - Diagnóstico Teórico e Testes
+FIRST OLS (Modelo em Nível) - A Prova da Regressão Espúria
 ----------------------------------------------------------------------
-Este script executa o modelo OLS inicial e o submete a uma bateria completa
-de testes econométricos para demonstrar falhas de estacionariedade,
-autocorrelação, heterocedasticidade, e multicolinearidade.
+Este script tem o objetivo deliberado de provar que a estimação em nível
+para dados macroeconômicos não é adequada. Ele executa testes rigorosos
+de raiz unitária (ADF e KPSS) e atesta que a regressão é espúria, 
+justificando a transição para diferenças.
 """
 
 import pandas as pd
 import numpy as np
 import statsmodels.formula.api as smf
-from statsmodels.tsa.stattools import adfuller
+from statsmodels.tsa.stattools import adfuller, kpss
 import statsmodels.stats.api as sms
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 from patsy import dmatrices
-import matplotlib.pyplot as plt
-import seaborn as sns
 import warnings
 import os
 
 warnings.filterwarnings('ignore')
-plt.style.use('seaborn-v0_8-whitegrid')
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # ---------------------------------------------------------
-# 1. CARREGAMENTO DOS DADOS E PREPARAÇÃO
+# 1. CARREGAMENTO DOS DADOS
 # ---------------------------------------------------------
 df = pd.read_csv(os.path.join(BASE_DIR, "dados", "painel_mestre.csv"))
+
+# Transformações Apenas para as Variáveis em Nível Absoluto
 df['ln_Invest_Tech'] = np.log(df['Investimento_Tech_USD'])
 df['ln_Produtividade'] = np.log(df['Produtividade_Hora_Habitual'])
-df['ln_VAB_Industria'] = np.log(df['VAB_Industria_Volume'])
-df.dropna(inplace=True)
 
-print("="*70)
-print(" 1. TESTES DE RAIZ UNITÁRIA (ADF) - NÃO-ESTACIONARIEDADE ")
-print("="*70)
-print("Avaliando se as séries possuem 'passeio aleatório' (tendência estocástica).")
-print("Teoria: Regredir séries não-estacionárias gera regressão espúria.\n")
+# VAB da Indústria já é uma taxa de variação que inclui valores negativos.
+# Tirar o logaritmo geraria NaN e excluiria as recessões. Entra direto.
+df['VAB_Industria_Growth'] = df['VAB_Industria_Volume']
 
-# Loop limpo por setor para ADF (corrigindo a falha anterior de usar apenas 'Comércio')
-setores = df['Setor'].unique()
-for setor in setores:
-    dados_setor = df[df['Setor'] == setor].sort_values('Trimestre')
+# Dummy de pandemia
+covid_quarters = ['2020q2', '2020q3', '2020q4', '2021q1', '2021q2']
+df['covid_periodo'] = df['Trimestre'].isin(covid_quarters).astype(int)
+
+df.dropna(subset=['ln_Produtividade', 'ln_Invest_Tech', 'VAB_Industria_Growth'], inplace=True)
+
+# ---------------------------------------------------------
+# 2. TESTES DUPLOS DE RAIZ UNITÁRIA (ADF E KPSS)
+# ---------------------------------------------------------
+print("="*80)
+print(" 1. DIAGNÓSTICO DE RAIZ UNITÁRIA NAS VARIÁVEIS EM NÍVEL ")
+print("="*80)
+print("H0 (ADF): A série POSSUI raiz unitária (Não-Estacionária)")
+print("H0 (KPSS): A série É estacionária em torno de uma tendência\n")
+
+variaveis_teste = ['ln_Produtividade', 'ln_Invest_Tech', 'VAB_Industria_Growth']
+
+for var in variaveis_teste:
+    print(f"\n--- Variável: {var} ---")
     
-    # Teste para Produtividade
-    adf_prod = adfuller(dados_setor['ln_Produtividade'], autolag='AIC')
-    print(f"[{setor}] ln_Produtividade P-value: {adf_prod[1]:.4f} " + 
-          ("(Não-Estacionária)" if adf_prod[1] > 0.05 else "(Estacionária)"))
-
-print("\nConclusão ADF: As variáveis dependentes em todos os setores falham em rejeitar a hipótese nula.")
-print("As séries são Não-Estacionárias (Possuem Raiz Unitária).\n")
-
+    if var in ['ln_Invest_Tech', 'VAB_Industria_Growth']:
+        serie_unica = df.drop_duplicates(subset=['Trimestre']).sort_values('Trimestre')[var]
+        adf_res = adfuller(serie_unica, autolag='AIC')
+        kpss_res = kpss(serie_unica, regression='c')
+        
+        adf_str = f"ADF: {adf_res[1]:.4f}"
+        kpss_str = f"KPSS: {kpss_res[1]:.4f}"
+        print(f"[Agregado Nacional        ] {adf_str} | {kpss_str}")
+        
+    else:
+        setores = df['Setor'].unique()
+        for setor in setores:
+            serie_setor = df[df['Setor'] == setor].sort_values('Trimestre')[var]
+            adf_res = adfuller(serie_setor, autolag='AIC')
+            kpss_res = kpss(serie_setor, regression='c')
+            
+            adf_str = f"ADF: {adf_res[1]:.4f}"
+            kpss_str = f"KPSS: {kpss_res[1]:.4f}"
+            print(f"[{setor:25}] {adf_str} | {kpss_str}")
 
 # ---------------------------------------------------------
-# 2. ESTIMAÇÃO DO MODELO (O MODELO ESPÚRIO)
+# 3. ESTIMAÇÃO DO MODELO EM NÍVEL (COM ERROS HC3)
 # ---------------------------------------------------------
-print("="*70)
-print(" 2. RESULTADOS DO MODELO (OLS EM NÍVEL) ")
-print("="*70)
-formula = 'ln_Produtividade ~ ln_Invest_Tech + ln_VAB_Industria + C(Setor) + C(Trimestre)'
-modelo = smf.ols(formula=formula, data=df).fit()
-print(modelo.summary().tables[0]) # Mostrando apenas a primeira tabela para não poluir
-print(modelo.summary().tables[1])
-print("\nNota: Durbin-Watson baixíssimo (0.534) indica fortíssima autocorrelação (sintoma de regressão espúria).\n")
+print("\n" + "="*80)
+print(" 2. ESTIMAÇÃO DO MODELO OLS EM NÍVEL ")
+print("="*80)
+
+formula = 'ln_Produtividade ~ ln_Invest_Tech + VAB_Industria_Growth + covid_periodo + C(Setor)'
+modelo_nivel = smf.ols(formula=formula, data=df).fit(cov_type='HC3')
+print(modelo_nivel.summary())
 
 # ---------------------------------------------------------
-# 3. BATERIA DE TESTES ECONOMÉTRICOS NOS RESÍDUOS
+# 4. DIAGNÓSTICO DOS RESÍDUOS (A FALHA DO MODELO 1)
 # ---------------------------------------------------------
-print("="*70)
-print(" 3. DIAGNÓSTICO DOS RESÍDUOS (TESTES PÓS-ESTIMAÇÃO) ")
-print("="*70)
+print("\n" + "="*80)
+print(" 3. DIAGNÓSTICO DOS RESÍDUOS (POR QUE O MODELO É INVÁLIDO) ")
+print("="*80)
 
-# A. Normalidade: Jarque-Bera
-jb_stat, jb_pval, skew, kurtosis = sms.jarque_bera(modelo.resid)
-print(f"A) Jarque-Bera (Normalidade): P-value = {jb_pval:.4f}")
-print("   Hipótese Nula: Resíduos seguem distribuição normal.")
-if jb_pval < 0.05: print("   -> Rejeitamos H0: Os resíduos NÃO são normais.\n")
-
-# Plot da Distribuição dos Resíduos
-plt.figure(figsize=(8, 5))
-sns.histplot(modelo.resid, kde=True, color='red', bins=30)
-plt.title('Distribuição dos Resíduos (First OLS - Regressão Espúria)', fontweight='bold', pad=15)
-plt.xlabel('Resíduos', fontweight='bold')
-plt.ylabel('Frequência', fontweight='bold')
-plt.tight_layout()
-plt.show()
-
-# B. Heterocedasticidade: Breusch-Pagan
-bp_test = sms.het_breuschpagan(modelo.resid, modelo.model.exog)
-print(f"B) Breusch-Pagan (Heterocedasticidade): P-value = {bp_test[1]:.4f}")
-print("   Hipótese Nula: Variância dos resíduos é constante (Homocedasticidade).")
-if bp_test[1] < 0.05: print("   -> Rejeitamos H0: Há Heterocedasticidade (erros-padrão originais são inválidos).\n")
-
-# C. Autocorrelação Serial: Breusch-Godfrey
-# Testando até 4 lags (1 ano de autocorrelação)
-bg_test = sms.acorr_breusch_godfrey(modelo, nlags=4)
-print(f"C) Breusch-Godfrey (Autocorrelação): P-value = {bg_test[1]:.4f}")
-print("   Hipótese Nula: Ausência de autocorrelação serial nos resíduos.")
-if bg_test[1] < 0.05: print("   -> Rejeitamos H0: Forte autocorrelação confirmada (série não estacionária).\n")
-
-# D. Multicolinearidade Perfeita (O Erro de Identificação)
-print("D) Multicolinearidade (VIF - Variance Inflation Factor)")
-print("   Calculando VIF para as variáveis numéricas para provar a multicolinearidade de ln_Invest_Tech...")
-# Construindo matriz de design apenas para variáveis numéricas (sem dummies) para evitar erro singular do VIF
-y, X = dmatrices('ln_Produtividade ~ ln_Invest_Tech + ln_VAB_Industria', data=df, return_type='dataframe')
+# A. Multicolinearidade (VIF)
+y_vif, X_vif = dmatrices(formula, data=df, return_type='dataframe')
 vif_data = pd.DataFrame()
-vif_data["feature"] = X.columns
-vif_data["VIF"] = [variance_inflation_factor(X.values, i) for i in range(len(X.columns))]
-print(vif_data)
-print("\n   [ALERTA METODOLÓGICO]: Quando incluímos C(Trimestre), a variável ln_Invest_Tech sofre")
-print("   Multicolinearidade Perfeita, pois o investimento tech nacional varia apenas no tempo, e não por setor.")
-print("   Os efeitos fixos de tempo 'engolem' a variação, gerando estimativas viesadas e lixo estatístico.")
-print("="*70)
+vif_data["feature"] = X_vif.columns
+vif_data["VIF"] = [variance_inflation_factor(X_vif.values, i) for i in range(len(X_vif.columns))]
+print("\nA) VIF (Multicolinearidade):")
+print(vif_data[vif_data['VIF'] > 5].to_string() if (vif_data['VIF'] > 5).any() else "Nenhuma variável com VIF > 5.")
+
+# B. Autocorrelação Serial (Breusch-Godfrey)
+bg_test = sms.acorr_breusch_godfrey(modelo_nivel, nlags=4)
+print(f"\nB) Breusch-Godfrey (Autocorrelação de Resíduos): P-value = {bg_test[1]:.4f}")
+if bg_test[1] < 0.05:
+    print("   -> FORTE AUTOCORRELAÇÃO DETECTADA. A regressão em nível é espúria.")
+
+# C. Heterocedasticidade (Breusch-Pagan)
+bp_test = sms.het_breuschpagan(modelo_nivel.resid, modelo_nivel.model.exog)
+print(f"\nC) Breusch-Pagan (Heterocedasticidade): P-value = {bp_test[1]:.4f}")
+if bp_test[1] < 0.05:
+    print("   -> HETEROCEDASTICIDADE DETECTADA.")
+
+print("\nCONCLUSÃO: Com raízes unitárias e fortíssima autocorrelação (Regressão Espúria),")
+print("devemos avançar para o Modelo 2 (Primeiras Diferenças).")
+print("="*80)
