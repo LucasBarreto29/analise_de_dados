@@ -16,9 +16,6 @@ df_ti = pd.read_csv('/Users/lucas/Desktop/analise_dados/analise_de_dados/TCC/dad
 
 df_merged = pd.merge(df_base, df_ti, on=['Setor', 'Trimestre'], how='inner')
 
-# Cálculo da Densidade TI
-df_merged['Densidade_TI'] = df_merged['Estoque_TI_Setor'] / df_merged['Estoque_Total_Setor']
-df_merged['Densidade_TI'] = df_merged['Densidade_TI'].replace(0, np.nan)
 
 # Passo 2: Integração do Índice FGV
 print("2. Carregando Índice de Capital Humano FGV...")
@@ -53,7 +50,7 @@ df_merged = pd.merge(df_merged, selic_trimestral, on='Trimestre', how='inner')
 
 # Passo 4: Exportação
 print("4. Selecionando colunas e exportando...")
-cols = ['Setor', 'Trimestre', 'Produtividade_Hora_Habitual', 'Estoque_TI_Setor', 'Densidade_TI', 'Capital_Humano_FGV', 'Selic']
+cols = ['Setor', 'Trimestre', 'Produtividade_Hora_Habitual', 'Estoque_TI_Setor', 'Capital_Humano_FGV', 'Selic']
 df_final = df_merged[cols]
 
 output_path = '/Users/lucas/Desktop/analise_dados/analise_de_dados/TCC/dados/painel_capital_humano_completo.csv'
