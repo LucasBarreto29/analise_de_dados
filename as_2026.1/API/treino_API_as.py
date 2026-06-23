@@ -4,7 +4,7 @@ import pandas as pd
 # =============================================================================
 # SIMULADO — APIs com IPEA e Laboratório de Finanças
 # Token Laboratório de Finanças (válido até ~2025):
-TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzc2OTQyMDE1LCJpYXQiOjE3NzQzNTAwMTUsImp0aSI6ImI3M2UyZGUyMmNkYTQ1ZWQ5ZmI2ZWZhYTAwZGM4N2I3IiwidXNlcl9pZCI6IjExNSJ9.BYwtttiHVt8EVA_653elnaGNcPAHdaWjlec9pusQLu7I"
+TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTgxMzcxNDE2NiwiaWF0IjoxNzgyMTc4MTY2LCJqdGkiOiJlMjIyOTAzY2YzNGU0MjJlYmY3NDY4OWE3MGFhMDg3ZiIsInVzZXJfaWQiOiIxNTQifQ.lxqhEgHrgN0gMYHJBhODqmTFv_UHsCffRWDC0oTjrwQ"
 BASE_URL_LAB = "https://laboratoriodefinancas.com/api/v2"
 BASE_URL_IPEA = "http://www.ipeadata.gov.br/api/odata4/Metadados/"
 # =============================================================================
@@ -66,27 +66,39 @@ maior_valor = df_ipc.loc[df_ipc['VALVALOR'].idxmax()]
 # (de 2024-01-02 até 2024-12-30).
 # Qual das duas ações rendeu mais? Exiba o rendimento de cada uma em percentual (%).
 # Dica: rendimento = (preço_fim / preço_ini) - 1
+params = {"ticker": "PETR4", "data_ini": "2024-01-02", "data_fim": "2024-12-30"}
+response = requests.get(
+    f"{BASE_URL_LAB}/preco/corrigido",
+    headers={"Authorization": f"Bearer {TOKEN}"},
+    params=params,
+    verify=False
+)
+print(response.status_code)
 
+dados3 = response.json()
+df_lab = pd.DataFrame(dados3)
+print(df_lab)
 
-# (1,5) QUESTÃO 4 — Lab de Finanças: Análise setorial do Planilhão
-# Acesse o Planilhão (endpoint: /bolsa/planilhao) na data base 2024-04-01.
-# Calcule a mediana do P/L (coluna: "pl") por setor ("setor").
-# Exiba os 5 setores com maior mediana de P/L, em ordem decrescente.
-# Ignore setores onde o P/L mediano seja negativo.
+preco_ini = float(df_lab[df_lab["data"] == '2024-01-02']["fechamento"].iloc[0])
+preco_fim = float(df_lab[df_lab["data"] == '2024-12-30']["fechamento"].iloc[0])
 
+rendimento_petr4 = ((preco_fim/preco_ini) - 1)*100
+print(f"{rendimento_petr4:.2f}%")
 
-# (1,5) QUESTÃO 5 — Lab de Finanças: Screening de ações
-# Ainda usando o Planilhão de 2024-04-01, monte um screening com os seguintes filtros:
-#   - Setor: "financeiro"
-#   - Dividend Yield (coluna: "dy") maior que 5%  →  dy > 0.05
-#   - P/VP (coluna: "pvp") menor que 2
-# Exiba os tickers que passam em todos os critérios, ordenados pelo maior DY.
+params2 = {"ticker": "ITUB4", "data_ini": "2024-01-02", "data_fim": "2024-12-30"}
+response2 = response = requests.get(
+    f"{BASE_URL_LAB}/preco/corrigido",
+    headers={"Authorization": f"Bearer {TOKEN}"},
+    params=params2,
+    verify=False
+)
+print(response2.status_code)
 
+dados4 = response2.json()
+df_lab2 = pd.DataFrame(dados4)
 
-# (1,5) QUESTÃO 6 — Lab de Finanças: Magic Formula adaptada por setor
-# Com os dados do Planilhão de 2024-04-01, aplique a Magic Formula
-# (usando ROIC e Earning Yield, colunas: "roic" e "earning_yield")
-# MAS desta vez monte uma carteira de 5 ações exclusivamente do setor "energia".
-# Ranqueie dentro do setor (rank crescente para ambos os indicadores),
-# some os ranks e selecione as 5 melhores (menor rank_final).
-# Exiba os tickers escolhidos e o setor confirmado.
+preco_ini2 = float(df_lab2[df_lab2["data"] == '2024-01-02']["fechamento"].iloc[0])
+preco_fim2 = float(df_lab2[df_lab2["data"] == '2024-12-30']["fechamento"].iloc[0])
+
+rendimento_itub4 = ((preco_fim2/preco_ini2) -1 ) *100
+print(f"{rendimento_itub4:.2f}%")
