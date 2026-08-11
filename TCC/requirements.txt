@@ -1,9 +1,0 @@
-jupyter
-ipykernel
-pandas
-numpy
-statsmodels
-linearmodels
-sidrapy
-matplotlib
-seaborn
